@@ -48,7 +48,9 @@ def train_neural_network(train_data, hiddenCount, fn, fn_, alpha):
         [0] * classLength,
     ]
     o = lambda x: [[1,0,0,0],[0,1,0,0],[0,0,1,0],[0,0,0,1]][x/90]
-    for _ in range(50):
+    
+    for iteration in range(50):
+        print "iteration",iteration
         for input_set, output_set in imap(lambda x: (x.data, o(x.orientation)), train_data):
             a = [input_set, [0]*hiddenCount, [0]*classLength]
             inp = [None, [0]*hiddenCount, [0]*classLength]
@@ -62,18 +64,19 @@ def train_neural_network(train_data, hiddenCount, fn, fn_, alpha):
             for j in range(classLength):
                 errors[2][j] = fn_(inp[-1][j]) * (output_set[j] - a[-1][j])
 
-            for l in [1, 0]:
-                for index, neuron_weights  in enumerate(weights[l+1]):
+            for l in [1,1]:
+                for index_layer_l  in range(len(errors[l])):
                     #import pdb; pdb.set_trace()
                     temp = 0
                     for index1, neuron_weights1 in enumerate(weights[l+1]):
-                        temp += weights[l+1][index1][index] * errors[l+1][index1]
+                        temp += weights[l+1][index1][index_layer_l] * errors[l+1][index1]
 
-                    errors[l][index] = fn_(inp[l+1][index]) * temp
+                    errors[l][index_layer_l] = fn_(inp[l][index_layer_l]) * temp
 
             for l in [1, 2]:
                 for neuron_index, neuron_weights in enumerate(weights[l]):
-                    weights[l][neuron_index] += alpha * a[l][neuron_index] * errors[l][index]
+                    for i,x in enumerate(neuron_weights):
+                        weights[l][neuron_index][i] += alpha * a[l][neuron_index] * errors[l][neuron_index]
 
     return weights
 
