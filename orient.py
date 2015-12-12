@@ -60,15 +60,20 @@ def train_neural_network(train_data, hiddenCount, fn, fn_, alpha):
 
             #Propagate deltas backward.
             for j in range(classLength):
-                errors[-1][j] = fn_(inp[-1][j]) * (output_set[j] - a[-1][j])
+                errors[2][j] = fn_(inp[-1][j]) * (output_set[j] - a[-1][j])
 
-            for l in [1]:
-                for index, neuron_weights  in enumerate(weights[l]):
-                    errors[l][index] = fn_(inp[l][index]) * dot(neuron_weights, errors[l+1])
+            for l in [1, 0]:
+                for index, neuron_weights  in enumerate(weights[l+1]):
+                    #import pdb; pdb.set_trace()
+                    temp = 0
+                    for index1, neuron_weights1 in enumerate(weights[l+1]):
+                        temp += weights[l+1][index1][index] * errors[l+1][index1]
+
+                    errors[l][index] = fn_(inp[l+1][index]) * temp
 
             for l in [1, 2]:
                 for neuron_index, neuron_weights in enumerate(weights[l]):
-                    weights[l][neuron_index] += alpha * a[l][neuron_index] * error[l][index]
+                    weights[l][neuron_index] += alpha * a[l][neuron_index] * errors[l][index]
 
     return weights
 
