@@ -12,7 +12,7 @@ tanh = lambda u: 2 * Neuron.sigmoid(2 * u) - 1
 def dot(x,y):
     if len(x) != len(y):
         raise "Unmatched dimensions."
-    return sum(map(operator.mul, zip(x,y)))
+    return sum(map(lambda (a,b): a*b, zip(x,y)))
 
 
 class TestData(object):
@@ -35,54 +35,7 @@ def load_data_file(fileName):
     return [TestData(line[0], int(line[1]), map(int,line[2:])) for line in map(lambda x: x.strip().split(), open(fileName))]
 
 
-class Neuron(object):
-    def __init__(self, numInputs, learningRate=0.2):
-        self.weights = map(random.random, range(numInputs+1)) #TODO: Generate weights such that mean is ZERO
-        self.activation = self.sigmoid
-
-    def solve(self, inputs):
-        dot_result = dot(self.weights, inputs + [1])
-        return self.activation(dot_result), dot_result
-
-class NeuralNetwork(object):
-    def __init__(self, featureLength, hiddenCount, classLength):
-        self.layers = [
-                [Neuron(featureLength) for _ in range(hiddenCount)],
-                [Neuron(hiddenCount) for _ in range(classLength)]
-        ]
-
-    def train(self, inputs, correct=None):
-        all_neuron_results = []
-        all_dot_results = []
-
-        prevResult = inputs
-
-        for index, layer in enumerate(self.layers):
-            layer_neurons_result = []
-            layer_dot_result = []
-            for neuron in layer:
-                dot_result, neuron_result = neuron.solve(prevResult)
-                layer_result.append(neuron_result)
-                layer_dot_result.append(dot_result)
-
-            all_neuron_results.append(layer_neurons_result)
-            all_dot_results.append(layer_dot_result)
-
-        #Back propagate.
-        errors = [None] * 2
-
-        #Check last layer
-        for index, neuron in enumerate(self.layers[1]):
-            error[1][index] = sigmoid_(all_dot_results[1][index]) * \
-                                        (result[1][index] - correct[index])
-
-        for layerIndex in [1, 0]:
-            for index, neuron in enumerate(self.layers[0]):
-                error[0][index] = sigmoid_(all_dot_results[layerIndex][index]) * \
-                                            dot(result[layers][index] - expected[index])
-
-
-def train_neural_network(train_data, hiddenCount, fn, fn_, alpha=0.2):
+def train_neural_network(train_data, hiddenCount, fn, fn_, alpha):
     featureLength = len(train_data[0].data)
     classLength = 4
     weights = [None, 
@@ -97,7 +50,7 @@ def train_neural_network(train_data, hiddenCount, fn, fn_, alpha=0.2):
     o = lambda x: [[1,0,0,0],[0,1,0,0],[0,0,1,0],[0,0,0,1]][x/90]
     for _ in range(50):
         for input_set, output_set in imap(lambda x: (x.data, o(x.orientation)), train_data):
-            a = [input_set, [], []]
+            a = [input_set, [0]*hiddenCount, [0]*classLength]
             inp = [None, [0]*hiddenCount, [0]*classLength]
 
             for l in [1, 2]:
@@ -119,14 +72,14 @@ def train_neural_network(train_data, hiddenCount, fn, fn_, alpha=0.2):
 
     return weights
 
-def solve_neural_network(train_data, test_data, hiddenCount, fn=sigmoid, fn_=sigmoid_):
-    weights = train_neural_network(train_data, hiddenCount)
+def solve_neural_network(train_data, test_data, hiddenCount, fn=sigmoid, fn_=sigmoid_, alpha=0.2):
+    weights = train_neural_network(train_data, hiddenCount, fn=sigmoid, fn_=sigmoid_, alpha=alpha)
 
     for test in test_data:
         input_arr = test
         for l in [1,2]:
             input_arr = [fn(dot(neuron_weights, input_arr)) for index, neuron_weights in enumerate(weights[l])]
-            yield [0,90,180,270][max(enumerate(input_arr), key=lambda x: x[1])[0]]
+        yield [0,90,180,270][max(enumerate(input_arr), key=lambda x: x[1])[0]]
 
 def main():
     _, train_file, test_file, algorithm, param = sys.argv
