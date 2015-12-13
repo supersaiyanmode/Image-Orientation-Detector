@@ -83,7 +83,7 @@ def train_neural_network(train_data, hiddenCount, fn, fn_, alpha):
 def solve_neural_network(train_data, test_data, hiddenCount, fn=sigmoid, fn_=sigmoid_, alpha=0.2):
     weights = train_neural_network(train_data, hiddenCount, fn=sigmoid, fn_=sigmoid_, alpha=alpha)
 
-    for test in test_data:
+    for test in imap(lambda x: x.data, test_data):
         input_arr = test
         for l in [1,2]:
             input_arr = [fn(dot(neuron_weights, input_arr)) for index, neuron_weights in enumerate(weights[l])]
