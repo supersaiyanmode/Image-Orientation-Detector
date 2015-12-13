@@ -1,6 +1,7 @@
 import sys
 import random
 import math
+import numpy
 
 from heapq import nlargest
 from itertools import izip, imap
@@ -40,8 +41,8 @@ def train_neural_network(train_data, hiddenCount, fn, fn_, alpha):
     featureLength = len(train_data[0].data)
     classLength = 4
     weights = [None, 
-        [[random.random() for __ in range(featureLength+1)] for _ in range(hiddenCount)], 
-        [[random.random() for __ in range(hiddenCount)] for _ in range(classLength)]
+        [[random.random()*2-1 for __ in range(featureLength+1)] for _ in range(hiddenCount)], 
+        [[random.random()*2-1 for __ in range(hiddenCount)] for _ in range(classLength)]
     ]
     errors = [
         [0] * featureLength,
@@ -49,48 +50,49 @@ def train_neural_network(train_data, hiddenCount, fn, fn_, alpha):
         [0] * classLength,
     ]
     o = lambda x: [[1,0,0,0],[0,1,0,0],[0,0,1,0],[0,0,0,1]][x/90]
-    
-    for iteration in range(4):
-        if iteration == 2:
-            import pdb;pdb.set_trace()
+    normalize = lambda x:x/255.0
+    for iteration in range(5):
         print "iteration",iteration
         sum_errors=[]
-        for input_set, output_set in imap(lambda x: (x.data, o(x.orientation)), train_data):
-            a = [input_set+[1], [0]*hiddenCount, [0]*classLength]
+        for input_set, output_set in imap(lambda x: (map(normalize,x.data), o(x.orientation)), train_data):
+            a = [input_set+[0.3], [0]*hiddenCount, [0]*classLength]
             inp = [None, [0]*hiddenCount, [0]*classLength]
 
             for l in [1, 2]:
                 for index, neuron_weights in enumerate(weights[l]):
-                    inp[l][index] = dot(neuron_weights, a[l-1])
+                    inp[l][index] = numpy.dot(neuron_weights, a[l-1])
                     a[l][index] = fn(inp[l][index])
             #Propagate deltas backward.
             for j in range(classLength):
-                errors[2][j] = fn_(inp[-1][j]) * (output_set[j] - a[-1][j])
-
-            for l in [1]:
-                for index_layer_l  in range(len(errors[l])):
-                    temp = 0
-                    for index1, neuron_weights1 in enumerate(weights[l]):
-                        temp += weights[l][index1][index_layer_l] * errors[l][index1]
-
-                    errors[l][index_layer_l] = fn_(inp[l][index_layer_l]) * temp
+                errors[2][j] = fn_(inp[-1][j]) *(output_set[j] - a[-1][j]) 
+            for index_layer_l  in range(len(errors[1])):
+                temp = 0.0
+                for index1, neuron_weights1 in enumerate(weights[2]):
+                    temp += weights[2][index1][index_layer_l] * errors[2][index1]
+                errors[1][index_layer_l] = fn_(inp[1][index_layer_l]) * temp
 
             for l in [1, 2]:
                 for neuron_index, neuron_weights in enumerate(weights[l]):
                     for i,x in enumerate(neuron_weights):
-                        weights[l][neuron_index][i] += alpha * a[l][neuron_index] * errors[l][neuron_index]
+                        #weights[l][neuron_index][i] += alpha *errors[l][neuron_index]*a[l][neuron_index] 
+                        weights[l][neuron_index][i] += alpha *errors[l][neuron_index]*a[l-1][i] 
             sum_errors.append(sum((x-y)**2 for x,y in zip(output_set,a[-1])))
         print "Average error:",sum(sum_errors)/float(len(sum_errors))
     return weights
 
-def solve_neural_network(train_data, test_data, hiddenCount, fn=tanh, fn_=tanh_, alpha=0.1):
+def solve_neural_network(train_data, test_data, hiddenCount, fn=sigmoid, fn_=sigmoid_, alpha=0.4):
     weights = train_neural_network(train_data, hiddenCount, fn=fn, fn_=fn_, alpha=alpha)
-
+    print weights
+    normalize = lambda x:x/255.0
     for test in test_data:
-        input_arr = test.data+[1]
-        for l in [1,2]:
-            input_arr = [fn(dot(neuron_weights, input_arr)) for index, neuron_weights in enumerate(weights[l])]
-        yield test, [0,90,180,270][max(enumerate(input_arr), key=lambda x: x[1])[0]]
+        input_arr = numpy.array(map(normalize,test.data+[0.3]))
+        weights_1 = numpy.array(weights[1])
+        mul1 =  map(fn,(numpy.dot(weights_1,input_arr.transpose())))
+        mul2 = map(fn,(numpy.dot(numpy.array(weights[2]),mul1)))
+        print "Input ARR:", mul2
+        
+        #print "Input Arr:",a[-1]
+        yield test, [0,90,180,270][max(enumerate(mul2), key=lambda x: x[1])[0]]
 
 def main():
     _, train_file, test_file, algorithm, param = sys.argv
