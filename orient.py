@@ -4,7 +4,7 @@ import math
 import json
 import numpy
 import matplotlib.pyplot as pyplot
-
+import time
 from heapq import nlargest
 from itertools import izip, imap
 
@@ -59,7 +59,7 @@ def train_neural_network(train_data, hiddenCount, fn, fn_, alpha):
     normalize = lambda x:x/255.0
     total_avg_error = 0
     for iteration in range(5):
-        print "iteration",iteration
+        print "iteration",iteration+1
         sum_errors=[]
         for input_set, output_set in imap(lambda x: (map(normalize,x.data), o(x.orientation)), train_data):
             a = [input_set+[0.3], [0]*hiddenCount, [0]*classLength]
@@ -126,7 +126,7 @@ def solve_best(train_data, test_data, param):
 
 def main():
     _, train_file, test_file, algorithm, param = sys.argv
-
+    start = time.time()
     train_data = load_data_file(train_file)
     test_data = load_data_file(test_file)
 
@@ -143,6 +143,8 @@ def main():
     print "\n".join("%3d %3d %3d %3d"%tuple(row) for row in confusion_matrix)
     print "Overall Accuracy:", 100 * float(sum(confusion_matrix[i][i] for i in range(4)))/ \
                     sum(sum(cell for cell in row) for row in confusion_matrix), "%"
+    end = time.time()
+    print "Overall Time:",end-start
     pyplot.plot(range(len(average_error_iter)),average_error_iter)
     axes = pyplot.gca()
     axes.set_xlabel('x')
