@@ -15,7 +15,8 @@ tanh_ = lambda u: 1-tanh(u)**2
 new = lambda u: 1.7159*math.tanh(2.0 * u / 3.0) 
 new_ = lambda u: 1.14393 * tanh_(2.0 * u / 3.0)
 average_error_iter = []
-NN_train_fn = train_neural_network
+bias = 0.4
+max_iter = 3 
 
 def dot(x,y):
     if len(x) != len(y):
@@ -59,11 +60,11 @@ def train_neural_network(train_data, hiddenCount, fn, fn_, alpha):
     o = lambda x: [[1,0,0,0],[0,1,0,0],[0,0,1,0],[0,0,0,1]][x/90]
     normalize = lambda x:x/255.0
     total_avg_error = 0
-    for iteration in range(15):
+    for iteration in range(max_iter):
         print "iteration",iteration+1
         sum_errors=[]
         for input_set, output_set in imap(lambda x: (map(normalize,x.data), o(x.orientation)), train_data):
-            a = [input_set+[0.3], [0]*hiddenCount, [0]*classLength]
+            a = [input_set+[bias], [0]*hiddenCount, [0]*classLength]
             inp = [None, [0]*hiddenCount, [0]*classLength]
 
             for l in [1, 2]:
@@ -111,7 +112,7 @@ def train_neural_network_multi(train_data, hiddenCount, fn, fn_, alpha):
         print "iteration",iteration+1
         sum_errors=[]
         for input_set, output_set in imap(lambda x: (map(normalize,x.data), o(x.orientation)), train_data):
-            a = [input_set+[0.3], [0]*hiddenCount,[0]*hiddenCount, [0]*classLength]
+            a = [input_set+[bias], [0]*hiddenCount,[0]*hiddenCount, [0]*classLength]
             inp = [None, [0]*hiddenCount, [0]*hiddenCount,[0]*classLength]
 
             for l in [1, 2,3]:
@@ -144,12 +145,13 @@ def train_neural_network_multi(train_data, hiddenCount, fn, fn_, alpha):
 def solve_neural_network(test_data, weights, fn):
     normalize = lambda x:x/255.0
     for test in test_data:
-        input_arr = numpy.array(map(normalize,test.data+[0.3]))
+        input_arr = numpy.array(map(normalize,test.data+[bias]))
         weights_1 = numpy.array(weights[1])
-        mul1 =  map(fn,(numpy.dot(weights_1,input_arr.transpose())))
-        mul2 = map(fn,(numpy.dot(numpy.array(weights[2]),mul1)))
-        mul3 = map(fn,(numpy.dot(numpy.array(weights[3]),mul2)))
-        yield test, [0,90,180,270][max(enumerate(mul3), key=lambda x: x[1])[0]]
+        res =  map(fn,(numpy.dot(weights_1,input_arr.transpose())))
+        res = map(fn,(numpy.dot(numpy.array(weights[2]),res)))
+        if (len(weights))==4:
+            res = map(fn,(numpy.dot(numpy.array(weights[3]),res)))
+        yield test, [0,90,180,270][max(enumerate(res), key=lambda x: x[1])[0]]
 
 def solve_train_neural_network(train_data, test_data, hiddenCount, fn=sigmoid, fn_=sigmoid_, alpha=0.2):
     weights, total_avg_error = NN_train_fn(train_data, int(hiddenCount), fn=fn, fn_=fn_, alpha=alpha)
@@ -176,6 +178,7 @@ def solve_best(train_data, test_data, param):
     for result in solve_neural_network(test_data, obj["weights"], fn):
         yield result
 
+NN_train_fn = train_neural_network
 def main():
     _, train_file, test_file, algorithm, param = sys.argv
     start = time.time()
