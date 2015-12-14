@@ -3,7 +3,6 @@ import random
 import math
 import json
 import numpy
-
 from heapq import nlargest
 from itertools import izip, imap
 
@@ -13,7 +12,9 @@ tanh = lambda u: math.tanh(u)
 tanh_ = lambda u: 1-tanh(u)**2
 new = lambda u: 1.7159*math.tanh(2.0 * u / 3.0) 
 new_ = lambda u: 1.14393 * tanh_(2.0 * u / 3.0)
-
+average_error_iter = []
+bias = 0.4
+max_iter = 3 
 
 def dot(x,y):
     if len(x) != len(y):
@@ -57,11 +58,11 @@ def train_neural_network(train_data, hiddenCount, fn, fn_, alpha):
     o = lambda x: [[1,0,0,0],[0,1,0,0],[0,0,1,0],[0,0,0,1]][x/90]
     normalize = lambda x:x/255.0
     total_avg_error = 0
-    for iteration in range(5):
-        print "iteration",iteration
+    for iteration in range(max_iter):
+        print "iteration",iteration+1
         sum_errors=[]
         for input_set, output_set in imap(lambda x: (map(normalize,x.data), o(x.orientation)), train_data):
-            a = [input_set+[0.3], [0]*hiddenCount, [0]*classLength]
+            a = [input_set+[bias], [0]*hiddenCount, [0]*classLength]
             inp = [None, [0]*hiddenCount, [0]*classLength]
 
             for l in [1, 2]:
@@ -87,18 +88,70 @@ def train_neural_network(train_data, hiddenCount, fn, fn_, alpha):
         total_avg_error = sum(sum_errors)/float(len(sum_errors))
         print "Average error:", total_avg_error
     return weights, total_avg_error
+def train_neural_network_multi(train_data, hiddenCount, fn, fn_, alpha):
+    featureLength = len(train_data[0].data)
+    classLength = 4
+    weights = [None, 
+        [[random.random()*2-1 for __ in range(featureLength+1)] for _ in range(hiddenCount)], 
+        [[random.random()*2-1 for __ in range(hiddenCount)] for _ in range(hiddenCount)], 
+        [[random.random()*2-1 for __ in range(hiddenCount)] for _ in range(classLength)]
+    ]
+    errors = [
+        [0] * featureLength,
+        [0] * hiddenCount,
+        [0] * hiddenCount,
+        [0] * classLength,
+    ]
+    o = lambda x: [[1,0,0,0],[0,1,0,0],[0,0,1,0],[0,0,0,1]][x/90]
+    normalize = lambda x:x/255.0
+    total_avg_error = 0
+    for iteration in range(15):
+        print "iteration",iteration+1
+        sum_errors=[]
+        for input_set, output_set in imap(lambda x: (map(normalize,x.data), o(x.orientation)), train_data):
+            a = [input_set+[bias], [0]*hiddenCount,[0]*hiddenCount, [0]*classLength]
+            inp = [None, [0]*hiddenCount, [0]*hiddenCount,[0]*classLength]
+
+            for l in [1, 2,3]:
+                for index, neuron_weights in enumerate(weights[l]):
+                    inp[l][index] = numpy.dot(neuron_weights, a[l-1])
+                    a[l][index] = fn(inp[l][index])
+
+            #Propagate deltas backward.
+            for j in range(classLength):
+                errors[3][j] = fn_(inp[-1][j]) *(output_set[j] - a[-1][j]) 
+            for cur_layer in [2,1]:
+                for index_layer_l  in range(len(errors[cur_layer])):
+                    temp = 0.0
+                    for index1, neuron_weights1 in enumerate(weights[cur_layer+1]):
+                        temp += weights[cur_layer+1][index1][index_layer_l] * errors[cur_layer+1][index1]
+                    errors[cur_layer][index_layer_l] = fn_(inp[cur_layer][index_layer_l]) * temp
+
+            for l in [1, 2,3]:
+                for neuron_index, neuron_weights in enumerate(weights[l]):
+                    for i,x in enumerate(neuron_weights):
+                        weights[l][neuron_index][i] += alpha *errors[l][neuron_index]*a[l-1][i] 
+            sum_errors.append(sum((x-y)**2 for x,y in zip(output_set,a[-1])))
+
+        total_avg_error = sum(sum_errors)/float(len(sum_errors))
+        average_error_iter.append(total_avg_error)
+        print "Average error:", total_avg_error
+    return weights, total_avg_error
+
 
 def solve_neural_network(test_data, weights, fn):
     normalize = lambda x:x/255.0
     for test in test_data:
-        input_arr = numpy.array(map(normalize,test.data+[0.3]))
+        input_arr = numpy.array(map(normalize,test.data+[bias]))
         weights_1 = numpy.array(weights[1])
-        mul1 =  map(fn,(numpy.dot(weights_1,input_arr.transpose())))
-        mul2 = map(fn,(numpy.dot(numpy.array(weights[2]),mul1)))
-        yield test, [0,90,180,270][max(enumerate(mul2), key=lambda x: x[1])[0]]
+        res =  map(fn,(numpy.dot(weights_1,input_arr.transpose())))
+        res = map(fn,(numpy.dot(numpy.array(weights[2]),res)))
+        if (len(weights))==4:
+            res = map(fn,(numpy.dot(numpy.array(weights[3]),res)))
+        yield test, [0,90,180,270][max(enumerate(res), key=lambda x: x[1])[0]]
 
-def solve_train_neural_network(train_data, test_data, hiddenCount, fn=sigmoid, fn_=sigmoid_, alpha=0.4):
-    weights, total_avg_error = train_neural_network(train_data, int(hiddenCount), fn=fn, fn_=fn_, alpha=alpha)
+def solve_train_neural_network(train_data, test_data, hiddenCount, fn=sigmoid, fn_=sigmoid_, alpha=0.2):
+    weights, total_avg_error = NN_train_fn(train_data, int(hiddenCount), fn=fn, fn_=fn_, alpha=alpha)
     for result in solve_neural_network(test_data, weights, fn):
         yield result
 
@@ -122,9 +175,9 @@ def solve_best(train_data, test_data, param):
     for result in solve_neural_network(test_data, obj["weights"], fn):
         yield result
 
+NN_train_fn = train_neural_network_multi
 def main():
     _, train_file, test_file, algorithm, param = sys.argv
-
     train_data = load_data_file(train_file)
     test_data = load_data_file(test_file)
 
@@ -141,7 +194,6 @@ def main():
     print "\n".join("%3d %3d %3d %3d"%tuple(row) for row in confusion_matrix)
     print "Overall Accuracy:", 100 * float(sum(confusion_matrix[i][i] for i in range(4)))/ \
                     sum(sum(cell for cell in row) for row in confusion_matrix), "%"
-
 if __name__ == '__main__':
     random.seed()
     main()
