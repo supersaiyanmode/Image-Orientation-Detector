@@ -1,3 +1,8 @@
+#
+# Authors: Srivatsan Iyer, Dwipam Katariya
+# Please refer to Summary.pdf and Analysis_6.pdf
+#
+
 import sys
 import random
 import math
