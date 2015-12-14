@@ -3,7 +3,6 @@ import random
 import math
 import json
 import numpy
-import matplotlib.pyplot as pyplot
 
 from heapq import nlargest
 from itertools import izip, imap
@@ -14,7 +13,7 @@ tanh = lambda u: math.tanh(u)
 tanh_ = lambda u: 1-tanh(u)**2
 new = lambda u: 1.7159*math.tanh(2.0 * u / 3.0) 
 new_ = lambda u: 1.14393 * tanh_(2.0 * u / 3.0)
-average_error_iter = []
+
 
 def dot(x,y):
     if len(x) != len(y):
@@ -86,7 +85,6 @@ def train_neural_network(train_data, hiddenCount, fn, fn_, alpha):
             sum_errors.append(sum((x-y)**2 for x,y in zip(output_set,a[-1])))
 
         total_avg_error = sum(sum_errors)/float(len(sum_errors))
-        average_error_iter.append(total_avg_error)
         print "Average error:", total_avg_error
     return weights, total_avg_error
 
@@ -143,11 +141,7 @@ def main():
     print "\n".join("%3d %3d %3d %3d"%tuple(row) for row in confusion_matrix)
     print "Overall Accuracy:", 100 * float(sum(confusion_matrix[i][i] for i in range(4)))/ \
                     sum(sum(cell for cell in row) for row in confusion_matrix), "%"
-    pyplot.plot(range(len(average_error_iter)),average_error_iter)
-    axes = pyplot.gca()
-    axes.set_xlabel('x')
-    axes.set_ylabel('y')
-    pyplot.show()
+
 if __name__ == '__main__':
     random.seed()
     main()
