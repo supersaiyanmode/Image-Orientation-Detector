@@ -58,7 +58,7 @@ def train_neural_network(train_data, hiddenCount, fn, fn_, alpha):
     o = lambda x: [[1,0,0,0],[0,1,0,0],[0,0,1,0],[0,0,0,1]][x/90]
     normalize = lambda x:x/255.0
     total_avg_error = 0
-    for iteration in range(5):
+    for iteration in range(15):
         print "iteration",iteration+1
         sum_errors=[]
         for input_set, output_set in imap(lambda x: (map(normalize,x.data), o(x.orientation)), train_data):
