@@ -13,8 +13,9 @@ tanh_ = lambda u: 1-tanh(u)**2
 new = lambda u: 1.7159*math.tanh(2.0 * u / 3.0) 
 new_ = lambda u: 1.14393 * tanh_(2.0 * u / 3.0)
 average_error_iter = []
-bias = 0.4
-max_iter = 3 
+bias = 0.3
+max_iter = 15
+alpha = 0.2
 
 def dot(x,y):
     if len(x) != len(y):
@@ -150,7 +151,7 @@ def solve_neural_network(test_data, weights, fn):
             res = map(fn,(numpy.dot(numpy.array(weights[3]),res)))
         yield test, [0,90,180,270][max(enumerate(res), key=lambda x: x[1])[0]]
 
-def solve_train_neural_network(train_data, test_data, hiddenCount, fn=sigmoid, fn_=sigmoid_, alpha=0.2):
+def solve_train_neural_network(train_data, test_data, hiddenCount, fn=sigmoid, fn_=sigmoid_, alpha=alpha):
     weights, total_avg_error = NN_train_fn(train_data, int(hiddenCount), fn=fn, fn_=fn_, alpha=alpha)
     for result in solve_neural_network(test_data, weights, fn):
         yield result
@@ -175,7 +176,7 @@ def solve_best(train_data, test_data, param):
     for result in solve_neural_network(test_data, obj["weights"], fn):
         yield result
 
-NN_train_fn = train_neural_network_multi
+NN_train_fn = train_neural_network
 def main():
     _, train_file, test_file, algorithm, param = sys.argv
     train_data = load_data_file(train_file)
